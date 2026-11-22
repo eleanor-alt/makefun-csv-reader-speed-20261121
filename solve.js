@@ -46,17 +46,6 @@ export function run(input) {
   let fEnded = END;
   let fAdded = 0;
 
-  function error(code) {
-    errors.push({ code, line: recordLine, row: recordRow });
-  }
-
-  // The field value from its pieces: `prefix` plus the kept segments in `parts`
-  // (null: none) plus the final slice [start, end). No copy when it is one slice.
-  function joinField(prefix, parts, start, end) {
-    if (parts === null) return prefix === '' ? text.slice(start, end) : prefix + text.slice(start, end);
-    return prefix + parts.join('') + text.slice(start, end);
-  }
-
   // Reads unquoted characters onto `prefix` up to the next comma or line break:
   // a CR not followed by LF is dropped (stray_cr). Sets fValue, fEnded, fAdded.
   function readUnquoted(prefix) {
@@ -68,7 +57,7 @@ export function run(input) {
       const c = text.charCodeAt(i);
       if (c === 44) {
         // ','
-        fValue = joinField(prefix, parts, start, i);
+        fValue = parts === null ? (prefix === '' ? text.slice(start, i) : prefix + text.slice(start, i)) : prefix + parts.join('') + text.slice(start, i);
         fAdded = added + (i - start);
         pos = i + 1;
         fEnded = COMMA;
@@ -76,7 +65,7 @@ export function run(input) {
       }
       if (c === 10) {
         // '\n'
-        fValue = joinField(prefix, parts, start, i);
+        fValue = parts === null ? (prefix === '' ? text.slice(start, i) : prefix + text.slice(start, i)) : prefix + parts.join('') + text.slice(start, i);
         fAdded = added + (i - start);
         line += 1;
         pos = i + 1;
@@ -86,14 +75,14 @@ export function run(input) {
       if (c === 13) {
         // '\r'
         if (text.charCodeAt(i + 1) === 10) {
-          fValue = joinField(prefix, parts, start, i);
+          fValue = parts === null ? (prefix === '' ? text.slice(start, i) : prefix + text.slice(start, i)) : prefix + parts.join('') + text.slice(start, i);
           fAdded = added + (i - start);
           line += 1;
           pos = i + 2;
           fEnded = LINE_BREAK;
           return;
         }
-        error('stray_cr');
+        errors.push({ code: 'stray_cr', line: recordLine, row: recordRow });
         if (parts === null) parts = [];
         parts.push(text.slice(start, i));
         added += i - start;
@@ -103,7 +92,7 @@ export function run(input) {
       }
       i += 1;
     }
-    fValue = joinField(prefix, parts, start, i);
+    fValue = parts === null ? (prefix === '' ? text.slice(start, i) : prefix + text.slice(start, i)) : prefix + parts.join('') + text.slice(start, i);
     fAdded = added + (i - start);
     pos = i;
     fEnded = END;
@@ -160,7 +149,7 @@ export function run(input) {
         // What follows the closing quote is appended as it stands, up to the
         // next comma or line break.
         readUnquoted(value);
-        if (fAdded > 0) error('quote_junk');
+        if (fAdded > 0) errors.push({ code: 'quote_junk', line: recordLine, row: recordRow });
         return;
       }
       if (c === 13) {
@@ -179,7 +168,7 @@ export function run(input) {
     // is read again as unquoted.
     pos = open + 1;
     line = openLine;
-    error('unterminated_quote');
+    errors.push({ code: 'unterminated_quote', line: recordLine, row: recordRow });
     readUnquoted('"');
   }
 
