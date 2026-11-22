@@ -9,8 +9,6 @@
 //  - One left-to-right pass with charCodeAt and slice(): an unquoted field is one
 //    slice, never built a character at a time; a quoted field is scanned the same
 //    way and only rebuilt (from slices) when it holds a doubled quote or a CR.
-//  - A whole record whose line holds no quote and no CR is split natively in one
-//    call (String split on a slice of the line), which covers most records.
 //  - Rare paths (stray CR, quote junk, unterminated quote) fall back to the same
 //    segment logic, so the answers stay identical in every case.
 //
